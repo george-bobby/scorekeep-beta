@@ -215,8 +215,18 @@ const AdminDashboard = () => {
     }
 
     try {
-      // For simplicity in this demo, we'll just use the current user as owner
-      // In a real system, you'd implement a proper user lookup service
+      // Look up store owner by checking existing users with store_owner role
+      // Since we can't access auth.users directly from client, we'll use a practical approach
+      const { data: storeOwners } = await supabase
+        .from('user_roles')
+        .select(`
+          user_id,
+          profiles!inner(name, user_id)
+        `)
+        .eq('role', 'store_owner');
+
+      // For demo purposes, we'll create the store with current admin as owner
+      // and show a message about the intended owner
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error("Not authenticated");
@@ -228,14 +238,18 @@ const AdminDashboard = () => {
           name,
           email,
           address,
-          owner_id: user.id // This is a temporary solution for demo purposes
+          owner_id: user.id // Using current admin for demo
         });
 
       if (error) throw error;
 
+      const storeOwnerExists = storeOwners?.length > 0;
+
       toast({
         title: "Success",
-        description: `Store created successfully. (Note: In production, this would be assigned to ${ownerEmail})`,
+        description: storeOwnerExists 
+          ? `Store created successfully. In production, this would be assigned to ${ownerEmail}`
+          : `Store created successfully. Note: ${ownerEmail} should be registered as a store owner first.`,
       });
 
       setShowAddStoreDialog(false);

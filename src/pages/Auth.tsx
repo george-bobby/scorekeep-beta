@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { validateName, validateEmail, validateAddress, validatePassword, validateRole, validateForm } from '@/lib/validation';
 
 const Auth = () => {
   const { user, signIn, signUp } = useAuth();
@@ -55,39 +56,26 @@ const Auth = () => {
     const name = formData.get('name') as string;
     const address = formData.get('address') as string;
 
-    // Validation
-    if (name.length < 20 || name.length > 60) {
+    // Validation using utility functions
+    const validationError = validateForm([
+      () => validateName(name),
+      () => validateEmail(email),
+      () => validateAddress(address),
+      () => validatePassword(password),
+      () => validateRole(selectedRole)
+    ]);
+
+    if (validationError) {
       toast({
         title: "Error",
-        description: "Name must be between 20-60 characters",
+        description: validationError,
         variant: "destructive"
       });
       setLoading(false);
       return;
     }
 
-    if (address.length > 400) {
-      toast({
-        title: "Error",
-        description: "Address must be less than 400 characters",
-        variant: "destructive"
-      });
-      setLoading(false);
-      return;
-    }
-
-    const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{8,16}$/;
-    if (!passwordRegex.test(password)) {
-      toast({
-        title: "Error",
-        description: "Password must be 8-16 characters with 1 uppercase and 1 special character",
-        variant: "destructive"
-      });
-      setLoading(false);
-      return;
-    }
-
-    const { error } = await signUp(email, password, name, address);
+    const { error } = await signUp(email, password, name, address, selectedRole);
     
     if (error) {
       toast({
@@ -96,17 +84,6 @@ const Auth = () => {
         variant: "destructive"
       });
     } else {
-      // Update user role if not default 'user'
-      if (selectedRole !== 'user') {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase
-            .from('user_roles')
-            .update({ role: selectedRole })
-            .eq('user_id', user.id);
-        }
-      }
-      
       toast({
         title: "Success",
         description: "Account created successfully! Please check your email to verify your account."
