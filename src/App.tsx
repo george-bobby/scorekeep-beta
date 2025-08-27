@@ -24,29 +24,29 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route 
-              path="/admin" 
+            <Route
+              path="/admin"
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/user" 
+            <Route
+              path="/user"
               element={
-                <ProtectedRoute requiredRole="user">
+                <ProtectedRoute allowedRoles={['user', 'admin', 'store_owner']}>
                   <UserDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/store-owner" 
+            <Route
+              path="/store-owner"
               element={
-                <ProtectedRoute requiredRole="store_owner">
+                <ProtectedRoute allowedRoles={['store_owner', 'admin']}>
                   <StoreOwnerDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

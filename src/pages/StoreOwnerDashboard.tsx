@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Star, Users } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Star, Users, Shield, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -31,11 +33,25 @@ interface StoreInfo {
 }
 
 const StoreOwnerDashboard = () => {
-  const { user, updatePassword } = useAuth();
+  const { user, updatePassword, userRole } = useAuth();
   const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
   const [ratings, setRatings] = useState<StoreRating[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+
+  // Determine if this is admin access
+  const isAdminAccess = userRole === 'admin';
+  const isNativeStoreOwnerAccess = userRole === 'store_owner';
+
+  const getPageTitle = () => {
+    if (isAdminAccess) return 'Store Owner Profile Management';
+    return 'Store Owner Dashboard';
+  };
+
+  const getAccessBadge = () => {
+    if (isAdminAccess) return { label: 'Admin Access', variant: 'destructive' as const, icon: Shield };
+    return null;
+  };
 
   useEffect(() => {
     fetchStoreData();
@@ -71,15 +87,15 @@ const StoreOwnerDashboard = () => {
           .select('name')
           .eq('user_id', rating.user_id)
           .maybeSingle();
-        
+
         return {
           ...rating,
           profiles: profile || { name: 'Anonymous' }
         };
       }));
 
-      const avgRating = ratingsWithProfiles && ratingsWithProfiles.length > 0 
-        ? ratingsWithProfiles.reduce((sum, r) => sum + r.rating, 0) / ratingsWithProfiles.length 
+      const avgRating = ratingsWithProfiles && ratingsWithProfiles.length > 0
+        ? ratingsWithProfiles.reduce((sum, r) => sum + r.rating, 0) / ratingsWithProfiles.length
         : 0;
 
       setStoreInfo({
@@ -121,7 +137,7 @@ const StoreOwnerDashboard = () => {
     }
 
     const { error } = await updatePassword(newPassword);
-    
+
     if (error) {
       toast({
         title: "Error",
@@ -139,7 +155,7 @@ const StoreOwnerDashboard = () => {
 
   if (loading) {
     return (
-      <Layout title="Store Owner Dashboard">
+      <Layout title={getPageTitle()}>
         <div className="text-center">Loading...</div>
       </Layout>
     );
@@ -147,18 +163,38 @@ const StoreOwnerDashboard = () => {
 
   if (!storeInfo) {
     return (
-      <Layout title="Store Owner Dashboard">
+      <Layout title={getPageTitle()}>
         <div className="text-center">
           <h2 className="text-xl font-semibold text-muted-foreground">No Store Found</h2>
-          <p className="text-muted-foreground">You don't have a store assigned to your account.</p>
+          <p className="text-muted-foreground">
+            {isAdminAccess
+              ? "No stores are currently registered in the system."
+              : "You don't have a store assigned to your account."
+            }
+          </p>
         </div>
       </Layout>
     );
   }
 
+  const accessBadge = getAccessBadge();
+
   return (
-    <Layout title="Store Owner Dashboard">
+    <Layout title={getPageTitle()}>
       <div className="space-y-8">
+        {/* Access Notification */}
+        {accessBadge && (
+          <Alert className="border-l-4 border-l-primary">
+            <accessBadge.icon className="h-4 w-4" />
+            <AlertDescription className="flex items-center gap-2">
+              <Badge variant={accessBadge.variant}>{accessBadge.label}</Badge>
+              <span>
+                You are viewing store owner profiles with administrative privileges. You can manage all store data and settings.
+              </span>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Store Info and Actions */}
         <div className="flex justify-between items-start">
           <div>
@@ -166,30 +202,32 @@ const StoreOwnerDashboard = () => {
             <p className="text-muted-foreground">{storeInfo.address}</p>
             <p className="text-muted-foreground">{storeInfo.email}</p>
           </div>
-          <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline">Update Password</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Update Password</DialogTitle>
-                <DialogDescription>Enter your new password</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handlePasswordUpdate} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input 
-                    id="newPassword" 
-                    name="newPassword" 
-                    type="password" 
-                    required 
-                    placeholder="8-16 chars, 1 uppercase, 1 special"
-                  />
-                </div>
-                <Button type="submit" className="w-full">Update Password</Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+          {isNativeStoreOwnerAccess && (
+            <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline">Update Password</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Update Password</DialogTitle>
+                  <DialogDescription>Enter your new password</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">New Password</Label>
+                    <Input
+                      id="newPassword"
+                      name="newPassword"
+                      type="password"
+                      required
+                      placeholder="8-16 chars, 1 uppercase, 1 special"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full">Update Password</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Stats Cards */}
@@ -206,7 +244,7 @@ const StoreOwnerDashboard = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Ratings</CardTitle>

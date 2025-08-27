@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Star, Search, Edit, Save, X } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Star, Search, Edit, Save, X, Info, Shield, Store as StoreIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -20,13 +22,30 @@ interface Store {
 }
 
 const UserDashboard = () => {
-  const { user, updatePassword } = useAuth();
+  const { user, updatePassword, userRole } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [storeFilter, setStoreFilter] = useState('');
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [editingRating, setEditingRating] = useState<string | null>(null);
   const [newRating, setNewRating] = useState<number>(1);
+
+  // Determine if this is cross-role access
+  const isAdminAccess = userRole === 'admin';
+  const isStoreOwnerAccess = userRole === 'store_owner';
+  const isNativeUserAccess = userRole === 'user';
+
+  const getPageTitle = () => {
+    if (isAdminAccess) return 'User Profile Management';
+    if (isStoreOwnerAccess) return 'User Profile View';
+    return 'User Dashboard';
+  };
+
+  const getAccessBadge = () => {
+    if (isAdminAccess) return { label: 'Admin Access', variant: 'destructive' as const, icon: Shield };
+    if (isStoreOwnerAccess) return { label: 'Store Owner Access', variant: 'secondary' as const, icon: StoreIcon };
+    return null;
+  };
 
   useEffect(() => {
     fetchStores();
@@ -47,8 +66,8 @@ const UserDashboard = () => {
       const storesWithRatings = (storesData || []).map(store => {
         const allRatings = store.ratings;
         const userRating = allRatings.find((r: any) => r.user_id === user.id);
-        const avgRating = allRatings.length > 0 
-          ? allRatings.reduce((sum: number, r: any) => sum + r.rating, 0) / allRatings.length 
+        const avgRating = allRatings.length > 0
+          ? allRatings.reduce((sum: number, r: any) => sum + r.rating, 0) / allRatings.length
           : 0;
 
         return {
@@ -90,7 +109,7 @@ const UserDashboard = () => {
     }
 
     const { error } = await updatePassword(newPassword);
-    
+
     if (error) {
       toast({
         title: "Error",
@@ -124,7 +143,7 @@ const UserDashboard = () => {
         title: "Success",
         description: "Rating submitted successfully"
       });
-      
+
       setEditingRating(null);
       fetchStores();
     } catch (error: any) {
@@ -136,49 +155,73 @@ const UserDashboard = () => {
     }
   };
 
-  const filteredStores = stores.filter(store => 
+  const filteredStores = stores.filter(store =>
     store.name.toLowerCase().includes(storeFilter.toLowerCase()) ||
     store.address.toLowerCase().includes(storeFilter.toLowerCase())
   );
 
   if (loading) {
     return (
-      <Layout title="User Dashboard">
+      <Layout title={getPageTitle()}>
         <div className="text-center">Loading...</div>
       </Layout>
     );
   }
 
+  const accessBadge = getAccessBadge();
+
   return (
-    <Layout title="User Dashboard">
+    <Layout title={getPageTitle()}>
       <div className="space-y-8">
+        {/* Access Notification */}
+        {accessBadge && (
+          <Alert className="border-l-4 border-l-primary">
+            <accessBadge.icon className="h-4 w-4" />
+            <AlertDescription className="flex items-center gap-2">
+              <Badge variant={accessBadge.variant}>{accessBadge.label}</Badge>
+              <span>
+                {isAdminAccess
+                  ? "You are viewing user profiles with administrative privileges. You can manage all user data and ratings."
+                  : "You are viewing user profiles as a store owner. You can see user ratings but cannot modify user data."
+                }
+              </span>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Actions */}
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Welcome to Store Ratings</h2>
-          <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline">Update Password</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Update Password</DialogTitle>
-                <DialogDescription>Enter your new password</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handlePasswordUpdate} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input 
-                    id="newPassword" 
-                    name="newPassword" 
-                    type="password" 
-                    required 
-                    placeholder="8-16 chars, 1 uppercase, 1 special"
-                  />
-                </div>
-                <Button type="submit" className="w-full">Update Password</Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <h2 className="text-2xl font-bold">
+            {isAdminAccess ? "User Profile Management" :
+              isStoreOwnerAccess ? "User Ratings Overview" :
+                "Welcome to Store Ratings"}
+          </h2>
+          {isNativeUserAccess && (
+            <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline">Update Password</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Update Password</DialogTitle>
+                  <DialogDescription>Enter your new password</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">New Password</Label>
+                    <Input
+                      id="newPassword"
+                      name="newPassword"
+                      type="password"
+                      required
+                      placeholder="8-16 chars, 1 uppercase, 1 special"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full">Update Password</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Stores List */}
@@ -201,7 +244,7 @@ const UserDashboard = () => {
                 </div>
               </div>
             </div>
-            
+
             <Table>
               <TableHeader>
                 <TableRow>
@@ -226,8 +269,8 @@ const UserDashboard = () => {
                     <TableCell>
                       {editingRating === store.id ? (
                         <div className="flex items-center space-x-2">
-                          <select 
-                            value={newRating} 
+                          <select
+                            value={newRating}
                             onChange={(e) => setNewRating(Number(e.target.value))}
                             className="border rounded px-2 py-1"
                           >
@@ -235,14 +278,14 @@ const UserDashboard = () => {
                               <option key={num} value={num}>{num}</option>
                             ))}
                           </select>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             onClick={() => handleRatingSubmit(store.id)}
                           >
                             <Save className="h-3 w-3" />
                           </Button>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             onClick={() => setEditingRating(null)}
                           >
@@ -264,8 +307,8 @@ const UserDashboard = () => {
                     </TableCell>
                     <TableCell>
                       {editingRating !== store.id && (
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => {
                             setEditingRating(store.id);

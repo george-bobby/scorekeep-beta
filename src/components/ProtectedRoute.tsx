@@ -5,9 +5,10 @@ import Layout from './Layout';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: 'admin' | 'user' | 'store_owner';
+  allowedRoles?: ('admin' | 'user' | 'store_owner')[];
 }
 
-const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, requiredRole, allowedRoles }: ProtectedRouteProps) => {
   const { user, userRole, loading } = useAuth();
 
   if (loading) {
@@ -24,7 +25,22 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
     return <Navigate to="/auth" replace />;
   }
 
-  if (requiredRole && userRole !== requiredRole) {
+  // Check if user has required role or is in allowed roles
+  const hasAccess = () => {
+    if (allowedRoles && allowedRoles.length > 0) {
+      return userRole && allowedRoles.includes(userRole);
+    }
+    if (requiredRole) {
+      return userRole === requiredRole;
+    }
+    return true;
+  };
+
+  if (!hasAccess()) {
+    const displayRequiredRoles = allowedRoles
+      ? allowedRoles.map(role => role.replace('_', ' ')).join(', ')
+      : requiredRole?.replace('_', ' ');
+
     return (
       <Layout title="Access Denied">
         <div className="text-center py-16">
@@ -34,7 +50,7 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
             Your current role: <span className="font-medium capitalize">{userRole?.replace('_', ' ')}</span>
           </p>
           <p className="text-sm text-muted-foreground">
-            Required role: <span className="font-medium capitalize">{requiredRole.replace('_', ' ')}</span>
+            Required role(s): <span className="font-medium capitalize">{displayRequiredRoles}</span>
           </p>
         </div>
       </Layout>
