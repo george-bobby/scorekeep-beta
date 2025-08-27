@@ -28,13 +28,10 @@ const Layout = ({ children, title }: LayoutProps) => {
               </span>
             )}
             <nav className="flex items-center space-x-4">
-              <Link to="/" className="text-sm hover:underline text-foreground">Dashboard</Link>
-              {userRole === 'admin' && (
-                <Link to="/admin" className="text-sm hover:underline text-foreground">Admin</Link>
-              )}
-              {userRole === 'store_owner' && (
-                <Link to="/store-owner" className="text-sm hover:underline text-foreground">Store Owner</Link>
-              )}
+              <Link to="/" className="text-sm hover:underline text-foreground">Home</Link>
+              <Link to="/user" className="text-sm hover:underline text-foreground">User</Link>
+              <Link to="/admin" className="text-sm hover:underline text-foreground">Admin</Link>
+              <Link to="/store-owner" className="text-sm hover:underline text-foreground">Store Owner</Link>
             </nav>
           </div>
           

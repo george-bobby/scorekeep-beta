@@ -134,17 +134,29 @@ const AdminDashboard = () => {
     const password = formData.get('password') as string;
     const name = formData.get('name') as string;
     const address = formData.get('address') as string;
-    const role = formData.get('role') as string;
+    const role = formData.get('role') as 'user' | 'admin' | 'store_owner';
 
     try {
-      const { error } = await supabase.auth.admin.createUser({
+      // Use regular signup instead of admin.createUser
+      const { error } = await supabase.auth.signUp({
         email,
         password,
-        user_metadata: { name, address },
-        email_confirm: true
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: { name, address }
+        }
       });
 
       if (error) throw error;
+
+      // Get the user and update their role
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await supabase
+          .from('user_roles')
+          .update({ role })
+          .eq('user_id', session.user.id);
+      }
 
       toast({
         title: "Success",
