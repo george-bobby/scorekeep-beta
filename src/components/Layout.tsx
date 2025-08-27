@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { LogOut, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface LayoutProps {
   children: ReactNode;
@@ -19,13 +20,22 @@ const Layout = ({ children, title }: LayoutProps) => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
             <h1 className="text-2xl font-bold text-foreground">{title}</h1>
             {userRole && (
               <span className="px-3 py-1 bg-primary text-primary-foreground rounded-full text-sm font-medium capitalize">
                 {userRole.replace('_', ' ')}
               </span>
             )}
+            <nav className="flex items-center space-x-4">
+              <Link to="/" className="text-sm hover:underline text-foreground">Dashboard</Link>
+              {userRole === 'admin' && (
+                <Link to="/admin" className="text-sm hover:underline text-foreground">Admin</Link>
+              )}
+              {userRole === 'store_owner' && (
+                <Link to="/store-owner" className="text-sm hover:underline text-foreground">Store Owner</Link>
+              )}
+            </nav>
           </div>
           
           <div className="flex items-center space-x-4">

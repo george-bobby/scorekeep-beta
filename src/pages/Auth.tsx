@@ -5,12 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
   const { user, signIn, signUp } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<'user' | 'admin' | 'store_owner'>('user');
 
   // Redirect if already authenticated
   if (user) {
@@ -93,6 +96,17 @@ const Auth = () => {
         variant: "destructive"
       });
     } else {
+      // Update user role if not default 'user'
+      if (selectedRole !== 'user') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('user_roles')
+            .update({ role: selectedRole })
+            .eq('user_id', user.id);
+        }
+      }
+      
       toast({
         title: "Success",
         description: "Account created successfully! Please check your email to verify your account."
@@ -183,6 +197,19 @@ const Auth = () => {
                     minLength={8}
                     maxLength={16}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role-select">Role</Label>
+                  <Select value={selectedRole} onValueChange={(value: 'user' | 'admin' | 'store_owner') => setSelectedRole(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="store_owner">Store Owner</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Creating account..." : "Sign Up"}
