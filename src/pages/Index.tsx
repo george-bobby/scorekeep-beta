@@ -11,24 +11,7 @@ const Index = () => {
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Redirect authenticated users to their appropriate dashboard
-    if (user && userRole) {
-      switch (userRole) {
-        case 'admin':
-          navigate('/admin');
-          break;
-        case 'store_owner':
-          navigate('/store-owner');
-          break;
-        case 'user':
-          navigate('/user');
-          break;
-        default:
-          break;
-      }
-    }
-  }, [user, userRole, navigate]);
+  // Homepage is now public - no auto redirect
 
   const features = [
     {
